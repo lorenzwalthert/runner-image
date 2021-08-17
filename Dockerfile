@@ -124,3 +124,15 @@ RUN : \
     && tar --strip-components 1 --directory /opt/swift -xf /tmp/swift.tar.gz \
     && rm /tmp/swift.tar.gz \
     && :
+
+ARG CONDA=py39_4.10.3
+ARG CONDA_SHA256=1ea2f885b4dbc3098662845560bc64271eb17085387a70c2ba3f29fff6f8d52f
+ENV PATH=/opt/conda/bin:$PATH CONDA_PKGS_DIRS=/tmp/conda/pkgs
+RUN : \
+    && echo 'lang: conda' \
+    && curl --silent --location --output /tmp/conda.sh "https://repo.anaconda.com/miniconda/Miniconda3-$CONDA-Linux-x86_64.sh" \
+    && bash /tmp/conda.sh -p /opt/conda/install -b \
+    && mkdir /opt/conda/bin \
+    && ln -sf /opt/conda/install/bin/conda /opt/conda/bin \
+    && rm -rf /tmp/conda.sh /root/.conda \
+    && :
