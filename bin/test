@@ -6,6 +6,8 @@ import os.path
 import subprocess
 import tempfile
 
+import yaml
+
 
 PYTHON_HOOKS = '''\
 repos:
@@ -348,6 +350,22 @@ def test_can_run_r_hook(tag: str, pc: str, podman: bool) -> None:
         _build_and_run(tag, tmpdir, pc, podman=podman)
 
 
+def _remove_ci_skip_from_precommit_config(path: str) -> None:
+    with open(path) as f:
+        config = yaml.safe_load(f) or {}
+
+    skip = set(config.get('ci', {}).get('skip', ()))
+    repos = config.get('repos', [])
+    for repo in repos:
+        hooks = repo.get('hooks', [])
+        repo['hooks'] = [hook for hook in hooks if hook.get('id') not in skip]
+
+    config.pop('ci', None)
+
+    with open(path, 'w') as f:
+        yaml.safe_dump(config, f, sort_keys=False)
+
+
 def test_can_run_r_precommit_repo_hook(
         tag: str, pc: str, podman: bool,
 ) -> None:
@@ -357,6 +375,9 @@ def test_can_run_r_precommit_repo_hook(
             'https://github.com/lorenzwalthert/precommit',
             tmpdir,
         ))
+        _remove_ci_skip_from_precommit_config(
+            os.path.join(tmpdir, '.pre-commit-config.yaml'),
+        )
 
         _build_and_run(tag, tmpdir, pc, podman=podman)
 
