@@ -256,6 +256,7 @@ repos:
         additional_dependencies: [-c, conda-forge, pyupgrade]
 '''
 
+
 def test_can_run_conda_hook(tag: str, pc: str, podman: bool) -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         subprocess.check_call(('git', 'init', tmpdir))
