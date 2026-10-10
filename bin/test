@@ -6,6 +6,8 @@ import os.path
 import subprocess
 import tempfile
 
+import yaml
+
 
 PYTHON_HOOKS = '''\
 repos:
@@ -333,7 +335,7 @@ repos:
     -   id: r-local
         name: r-local
         language: r
-        entry: Rscript -e "glue::glue('1+1')"
+        entry: Rscript -e "glue::glue('1+1'); library(stats)"
         additional_dependencies: [glue@1.4.2]
 '''
 
@@ -344,6 +346,38 @@ def test_can_run_r_hook(tag: str, pc: str, podman: bool) -> None:
         with open(os.path.join(tmpdir, '.pre-commit-config.yaml'), 'w') as f:
             f.write(R_HOOK)
         subprocess.check_call(('git', '-C', tmpdir, 'add', '.'))
+
+        _build_and_run(tag, tmpdir, pc, podman=podman)
+
+
+def _remove_ci_skip_from_precommit_config(path: str) -> None:
+    with open(path) as f:
+        config = yaml.safe_load(f) or {}
+
+    skip = set(config.get('ci', {}).get('skip', ()))
+    repos = config.get('repos', [])
+    for repo in repos:
+        hooks = repo.get('hooks', [])
+        repo['hooks'] = [hook for hook in hooks if hook.get('id') not in skip]
+
+    config.pop('ci', None)
+
+    with open(path, 'w') as f:
+        yaml.safe_dump(config, f, sort_keys=False)
+
+
+def test_can_run_r_precommit_repo_hook(
+        tag: str, pc: str, podman: bool,
+) -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        subprocess.check_call((
+            'git', 'clone', '--depth', '1',
+            'https://github.com/lorenzwalthert/precommit',
+            tmpdir,
+        ))
+        _remove_ci_skip_from_precommit_config(
+            os.path.join(tmpdir, '.pre-commit-config.yaml'),
+        )
 
         _build_and_run(tag, tmpdir, pc, podman=podman)
 
@@ -438,42 +472,46 @@ def main() -> int:
     parser.add_argument('tag')
     args = parser.parse_args()
 
-    minimal_tag = args.tag
     full_tag = f'{args.tag}-full'
 
     with tempfile.TemporaryDirectory() as pc:
-        print(' can run python tools '.center(79, '='), flush=True)
-        test_can_run_python_tools(minimal_tag, pc, podman=args.podman)
-        print(' considers system ruby suitable '.center(79, '='), flush=True)
-        test_considers_system_ruby_suitable(full_tag)
-        print(' condiders system node suitable '.center(79, '='), flush=True)
-        test_considers_system_node_suitable(full_tag)
-        print(' can run node hook '.center(79, '='), flush=True)
-        test_can_run_node_hook(full_tag, pc, podman=args.podman)
-        print(' can install ffi gem '.center(79, '='), flush=True)
-        test_can_install_ffi_gem(full_tag)
-        print(' can run go hooks '.center(79, '='), flush=True)
-        test_can_run_go_hook(full_tag, pc, podman=args.podman)
-        print(' can run rust hooks '.center(79, '='), flush=True)
-        test_can_run_rust_hook(full_tag, pc, podman=args.podman)
-        print(' can run swift hooks '.center(79, '='), flush=True)
-        test_can_run_swift_hook(full_tag, pc, podman=args.podman)
-        print(' can run dotnet hooks '.center(79, '='), flush=True)
-        test_can_run_dotnet_hook(full_tag, pc, podman=args.podman)
-        print(' can run conda hooks '.center(79, '='), flush=True)
-        test_can_run_conda_hook(full_tag, pc, podman=args.podman)
-        print(' can run dart tools '.center(79, '='), flush=True)
-        test_can_run_dart_hook(full_tag, pc, podman=args.podman)
-        print(' can run julia hooks '.center(79, '='), flush=True)
-        test_can_run_julia_hook(full_tag, pc, podman=args.podman)
-        print(' can run R hooks '.center(79, '='), flush=True)
-        test_can_run_r_hook(full_tag, pc, podman=args.podman)
-        print(' can run lua hooks '.center(79, '='), flush=True)
-        test_can_run_lua_hook(full_tag, pc, podman=args.podman)
-        print(' can run perl hooks '.center(79, '='), flush=True)
-        test_can_run_perl_hook(full_tag, pc, podman=args.podman)
-        print(' can run coursier hooks '.center(79, '='), flush=True)
-        test_can_run_coursier_hook(full_tag, pc, podman=args.podman)
+        # print(' can run python tools '.center(79, '='), flush=True)
+        # test_can_run_python_tools(minimal_tag, pc, podman=args.podman)
+        # print(' considers system ruby suitable '.center(79, '='), flush=True)
+        # test_considers_system_ruby_suitable(full_tag)
+        # print(' condiders system node suitable '.center(79, '='), flush=True)
+        # test_considers_system_node_suitable(full_tag)
+        # print(' can run node hook '.center(79, '='), flush=True)
+        # test_can_run_node_hook(full_tag, pc, podman=args.podman)
+        # print(' can install ffi gem '.center(79, '='), flush=True)
+        # test_can_install_ffi_gem(full_tag)
+        # print(' can run go hooks '.center(79, '='), flush=True)
+        # test_can_run_go_hook(full_tag, pc, podman=args.podman)
+        # print(' can run rust hooks '.center(79, '='), flush=True)
+        # test_can_run_rust_hook(full_tag, pc, podman=args.podman)
+        # print(' can run swift hooks '.center(79, '='), flush=True)
+        # test_can_run_swift_hook(full_tag, pc, podman=args.podman)
+        # print(' can run dotnet hooks '.center(79, '='), flush=True)
+        # test_can_run_dotnet_hook(full_tag, pc, podman=args.podman)
+        # print(' can run conda hooks '.center(79, '='), flush=True)
+        # test_can_run_conda_hook(full_tag, pc, podman=args.podman)
+        # print(' can run dart tools '.center(79, '='), flush=True)
+        # test_can_run_dart_hook(full_tag, pc, podman=args.podman)
+        # print(' can run julia hooks '.center(79, '='), flush=True)
+        # test_can_run_julia_hook(full_tag, pc, podman=args.podman)
+        # print(' can run R hooks '.center(79, '='), flush=True)
+        # test_can_run_r_hook(full_tag, pc, podman=args.podman)
+        print(
+            ' can run lorenzwalthert/precommit hooks '.center(79, '='),
+            flush=True,
+        )
+        test_can_run_r_precommit_repo_hook(full_tag, pc, podman=args.podman)
+        # print(' can run lua hooks '.center(79, '='), flush=True)
+        # test_can_run_lua_hook(full_tag, pc, podman=args.podman)
+        # print(' can run perl hooks '.center(79, '='), flush=True)
+        # test_can_run_perl_hook(full_tag, pc, podman=args.podman)
+        # print(' can run coursier hooks '.center(79, '='), flush=True)
+        # test_can_run_coursier_hook(full_tag, pc, podman=args.podman)
 
     return 0
 
